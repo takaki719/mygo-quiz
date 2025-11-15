@@ -1,0 +1,27 @@
+import { Song } from "@/lib/types";
+
+export const SONGS: Song[] = [
+  { title: "迷星叫", reading: "まよいうた", kanji: ["迷", "星", "叫"] },
+  { title: "名無声", reading: "なもなき", kanji: ["名", "無", "声"] },
+  { title: "影色舞", reading: "しるえっとだんす", kanji: ["影", "色", "舞"] },
+  { title: "音一会", reading: "おといちえ", kanji: ["音", "一", "会"] },
+  { title: "無路矢", reading: "のろし", kanji: ["無", "路", "矢"] },
+  { title: "壱雫空", reading: "ひとしずく", kanji: ["壱", "雫", "空"] },
+  { title: "焚音打", reading: "たねび", kanji: ["焚", "音", "打"] },
+  { title: "詩超絆", reading: "うたことば", kanji: ["詩", "超", "絆"] },
+  { title: "春日影", reading: "はるひかげ", kanji: ["春", "日", "影"] },
+  { title: "処救生", reading: "こきゅう", kanji: ["処", "救", "生"] },
+  { title: "輪符雨", reading: "りふれいん", kanji: ["輪", "符", "雨"] },
+  { title: "砂寸奏", reading: "さすらい", kanji: ["砂", "寸", "奏"] },
+  { title: "回層浮", reading: "かいそう", kanji: ["回", "層", "浮"] },
+  { title: "端程山", reading: "ぱのらま", kanji: ["端", "程", "山"] },
+  { title: "孤壊牢", reading: "こころ", kanji: ["孤", "壊", "牢"] },
+  { title: "過惰幻", reading: "あだゆめ", kanji: ["過", "惰", "幻"] },
+  { title: "霧周途", reading: "みすと", kanji: ["霧", "周", "途"] },
+  { title: "歩拾道", reading: "すぴーど", kanji: ["歩", "拾", "道"] },
+  { title: "明弦音", reading: "あげいん", kanji: ["明", "弦", "音"] },
+  { title: "夜隠染", reading: "よかぜ", kanji: ["夜", "隠", "染"] },
+  { title: "残痕字", reading: "ぺーじ", kanji: ["残", "痕", "字"] },
+  { title: "往欄印", reading: "おうらい", kanji: ["往", "欄", "印"] },
+  { title: "静降想", reading: "さいれんと", kanji: ["静", "降", "想"] },
+];
