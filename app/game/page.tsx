@@ -1,36 +1,67 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useMemo, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { PanelMode, GameConfig, Question } from "@/lib/types";
 import { SONGS } from "@/data/songs";
 import { createQuestion, judgeHitBlow } from "@/lib/gameLogic";
 
-function GameContent() {
+const shuffle = <T,>(array: T[]) => {
+  const result = [...array];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+};
+
+const normalizeQuestionCount = (countParam: string | null, total: number) => {
+  if (!countParam || countParam === "all") return total;
+  const parsed = Number.parseInt(countParam, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return total;
+  return Math.min(parsed, total);
+};
+
+type GameSessionProps = {
+  mode: PanelMode;
+  questionCount: number;
+  onRestart: () => void;
+};
+
+function GameSession({ mode, questionCount, onRestart }: GameSessionProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const mode = (searchParams.get("mode") as PanelMode) || "fixedFake9";
+  const config: GameConfig = useMemo(
+    () => ({
+      panelMode: mode,
+      fakeCount: 9,
+    }),
+    [mode]
+  );
 
-  const [config] = useState<GameConfig>({
-    panelMode: mode,
-    fakeCount: 9,
+  const songOrder = useMemo(() => shuffle(SONGS), []);
+  const totalSongCount = songOrder.length;
+
+  const [offset, setOffset] = useState(0);
+  const segmentSongs = useMemo(
+    () => songOrder.slice(offset, Math.min(offset + questionCount, totalSongCount)),
+    [offset, questionCount, songOrder, totalSongCount]
+  );
+  const [segmentIndex, setSegmentIndex] = useState(0);
+
+  const [question, setQuestion] = useState<Question | null>(() => {
+    const firstSong = segmentSongs[0];
+    return firstSong ? createQuestion(SONGS, config, [], firstSong) : null;
   });
-
-  const [question, setQuestion] = useState<Question | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [score, setScore] = useState(0);
   const [bannedKanji, setBannedKanji] = useState<string[]>([]);
+  const [segmentFinished, setSegmentFinished] = useState(false);
   const [result, setResult] = useState<{
     visible: boolean;
     isCorrect: boolean;
     hit: number;
     blow: number;
   } | null>(null);
-
-  // 初回問題生成
-  useEffect(() => {
-    setQuestion(createQuestion(SONGS, config, bannedKanji));
-  }, [config]);
 
   // 漢字パネルクリック
   const handlePanelClick = (kanji: string) => {
@@ -60,12 +91,14 @@ function GameContent() {
     });
 
     if (isCorrect) {
-      setScore(score + 1);
+      setScore((s) => s + 1);
     }
   };
 
   // 次の問題へ
   const handleNext = () => {
+    if (!question) return;
+
     // ハードモードの場合、正解の漢字をBANリストに追加
     let newBannedKanji = bannedKanji;
     if (config.panelMode === "allKanji" && question) {
@@ -73,7 +106,17 @@ function GameContent() {
       setBannedKanji(newBannedKanji);
     }
 
-    setQuestion(createQuestion(SONGS, config, newBannedKanji));
+    const nextIndex = segmentIndex + 1;
+    if (nextIndex >= segmentSongs.length) {
+      setSegmentFinished(true);
+      setQuestion(null);
+      setSelected([]);
+      setResult(null);
+      return;
+    }
+
+    setSegmentIndex(nextIndex);
+    setQuestion(createQuestion(SONGS, config, newBannedKanji, segmentSongs[nextIndex]));
     setSelected([]);
     setResult(null);
   };
@@ -99,6 +142,71 @@ function GameContent() {
     router.push("/");
   };
 
+  // 続き（次のN問）
+  const handleContinue = () => {
+    const nextOffset = offset + segmentSongs.length;
+    if (nextOffset >= totalSongCount) return;
+
+    const nextSegmentSongs = songOrder.slice(
+      nextOffset,
+      Math.min(nextOffset + questionCount, totalSongCount)
+    );
+    const nextSong = nextSegmentSongs[0];
+
+    setOffset(nextOffset);
+    setSegmentIndex(0);
+    setSegmentFinished(false);
+    setSelected([]);
+    setResult(null);
+    setQuestion(nextSong ? createQuestion(SONGS, config, bannedKanji, nextSong) : null);
+  };
+
+  if (segmentFinished) {
+    const completed = offset + segmentSongs.length;
+    const remaining = totalSongCount - completed;
+    const nextCount = Math.min(questionCount, remaining);
+    const isAllFinished = remaining <= 0;
+
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 max-w-md w-full text-center">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-transparent bg-clip-text">
+            {isAllFinished ? "全問クリア！" : "このセット完了！"}
+          </h2>
+          <p className="text-gray-700 text-lg mb-2">
+            進捗: {completed} / {totalSongCount}問
+          </p>
+          <p className="text-2xl font-bold text-purple-600 mb-8">
+            スコア: {score}
+          </p>
+
+          <div className="space-y-3">
+            {!isAllFinished && (
+              <button
+                onClick={handleContinue}
+                className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-3 px-6 rounded-xl text-base hover:shadow-xl transition-all duration-300 active:scale-95"
+              >
+                続き（次の{nextCount}問）
+              </button>
+            )}
+            <button
+              onClick={onRestart}
+              className="w-full bg-white text-gray-700 font-semibold py-3 px-6 rounded-xl shadow hover:bg-gray-50 transition-colors"
+            >
+              最初から（シャッフル）
+            </button>
+            <button
+              onClick={handleBackToTop}
+              className="w-full bg-white text-gray-700 font-semibold py-3 px-6 rounded-xl shadow hover:bg-gray-50 transition-colors"
+            >
+              トップへ戻る
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!question) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 flex items-center justify-center">
@@ -106,6 +214,8 @@ function GameContent() {
       </div>
     );
   }
+
+  const isLastQuestionInSegment = segmentIndex + 1 >= segmentSongs.length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-4 py-8">
@@ -119,6 +229,11 @@ function GameContent() {
             ← トップへ戻る
           </button>
           <div className="flex gap-2 sm:gap-3">
+            <div className="bg-white px-3 sm:px-6 py-2 sm:py-3 rounded-xl shadow-lg flex-1 sm:flex-none">
+              <span className="text-sm sm:text-lg font-bold text-gray-700 whitespace-nowrap">
+                問題: {segmentIndex + 1}/{segmentSongs.length}（通算{offset + segmentIndex + 1}/{totalSongCount}）
+              </span>
+            </div>
             {config.panelMode === "allKanji" && (
               <div className="bg-white px-3 sm:px-6 py-2 sm:py-3 rounded-xl shadow-lg flex-1 sm:flex-none">
                 <span className="text-sm sm:text-lg font-bold text-red-600 whitespace-nowrap">
@@ -235,7 +350,7 @@ function GameContent() {
                   onClick={handleNext}
                   className="w-full bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold py-3 sm:py-4 px-6 sm:px-8 rounded-xl text-base sm:text-lg hover:shadow-xl transition-all duration-300 active:scale-95"
                 >
-                  次の問題へ
+                  {isLastQuestionInSegment ? "結果へ" : "次の問題へ"}
                 </button>
               </>
             ) : (
@@ -265,6 +380,26 @@ function GameContent() {
         </div>
       )}
     </div>
+  );
+}
+
+function GameContent() {
+  const searchParams = useSearchParams();
+  const mode = (searchParams.get("mode") as PanelMode) || "fixedFake9";
+  const questionCountParam = searchParams.get("count");
+  const totalSongCount = SONGS.length;
+  const questionCount = normalizeQuestionCount(questionCountParam, totalSongCount);
+
+  const [runNonce, setRunNonce] = useState(0);
+  const handleRestart = () => setRunNonce((n) => n + 1);
+
+  return (
+    <GameSession
+      key={`${mode}:${questionCount}:${runNonce}`}
+      mode={mode}
+      questionCount={questionCount}
+      onRestart={handleRestart}
+    />
   );
 }
 

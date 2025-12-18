@@ -38,10 +38,11 @@ export const judgeHitBlow = (answer: string[], guess: string[]) => {
 export const createQuestion = (
   songs: Song[],
   config: GameConfig,
-  bannedKanji: string[] = []
+  bannedKanji: string[] = [],
+  answerSong?: Song
 ): Question => {
-  const answerSong = songs[Math.floor(Math.random() * songs.length)];
-  const correctKanji = [...answerSong.kanji];
+  const chosenSong = answerSong ?? songs[Math.floor(Math.random() * songs.length)];
+  const correctKanji = [...chosenSong.kanji];
 
   const allKanjiPool = Array.from(
     new Set(songs.flatMap((s) => s.kanji))
@@ -71,8 +72,8 @@ export const createQuestion = (
   const panels = [...panelKanji].sort(() => Math.random() - 0.5);
 
   return {
-    answerSong,
-    reading: answerSong.reading,
+    answerSong: chosenSong,
+    reading: chosenSong.reading,
     correctKanji,
     panels
   };

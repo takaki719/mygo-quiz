@@ -3,13 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { PanelMode } from "@/lib/types";
+import { SONGS } from "@/data/songs";
 
 export default function Home() {
   const router = useRouter();
   const [mode, setMode] = useState<PanelMode>("fixedFake9");
+  const [questionCount, setQuestionCount] = useState<string>("10");
 
   const handleStart = () => {
-    router.push(`/game?mode=${mode}`);
+    const params = new URLSearchParams({
+      mode,
+      count: questionCount,
+    });
+    router.push(`/game?${params.toString()}`);
   };
 
   return (
@@ -65,6 +71,23 @@ export default function Home() {
               </div>
             </label>
           </div>
+        </div>
+
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-700 mb-4">問題数</h2>
+          <select
+            value={questionCount}
+            onChange={(e) => setQuestionCount(e.target.value)}
+            className="w-full p-4 border-2 rounded-lg cursor-pointer transition-all hover:bg-purple-50 focus:outline-none focus:ring-2 focus:ring-purple-300"
+          >
+            <option value="5">5問</option>
+            <option value="10">10問</option>
+            <option value="20">20問</option>
+            <option value="all">全部（全{SONGS.length}問）</option>
+          </select>
+          <p className="text-sm text-gray-600 mt-2">
+            「全部」は曲が重複しないように全曲出題します
+          </p>
         </div>
 
         <button
