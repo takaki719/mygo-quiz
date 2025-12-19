@@ -68,11 +68,6 @@ function GameSession({ mode, questionCount, onRestart }: GameSessionProps) {
     if (selected.length < 3 && !selected.includes(kanji)) {
       const newSelected = [...selected, kanji];
       setSelected(newSelected);
-
-      // 3文字選択時に自動判定
-      if (newSelected.length === 3) {
-        checkAnswer(newSelected);
-      }
     }
   };
 
@@ -135,6 +130,13 @@ function GameSession({ mode, questionCount, onRestart }: GameSessionProps) {
   // リセット
   const handleReset = () => {
     setSelected([]);
+  };
+
+  // 回答実行
+  const handleSubmitAnswer = () => {
+    if (selected.length === 3 && !result?.visible) {
+      checkAnswer(selected);
+    }
   };
 
   // トップに戻る
@@ -257,7 +259,9 @@ function GameSession({ mode, questionCount, onRestart }: GameSessionProps) {
             <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 break-all">
               {question.reading}
             </h2>
-            <p className="text-sm sm:text-base text-gray-600 mt-3">漢字3つを順番に選んでね</p>
+            <p className="text-sm sm:text-base text-gray-600 mt-3">
+              漢字3つを順番に選んで「回答する」を押してね
+            </p>
           </div>
 
           {/* 選択スロット */}
@@ -276,6 +280,13 @@ function GameSession({ mode, questionCount, onRestart }: GameSessionProps) {
 
           {/* 操作ボタン */}
           <div className="flex justify-center gap-2 sm:gap-3 mb-6">
+            <button
+              onClick={handleSubmitAnswer}
+              disabled={selected.length !== 3 || !!result?.visible}
+              className="px-5 sm:px-7 py-2.5 sm:py-3 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-all text-sm sm:text-base active:scale-95"
+            >
+              回答する
+            </button>
             <button
               onClick={handleRemoveLast}
               disabled={selected.length === 0}
